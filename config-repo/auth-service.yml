@@ -1,0 +1,24 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: auth-service
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+# Keycloak Configuration
+keycloak:
+  realm: microservices-realm
+  auth-server-url: http://keycloak:8180
+  admin-username: admin
+  admin-password: admin
+  client-id: auth-service-client
+  client-secret: S3cr3t-Auth-S3rv1c3-K3y-2024

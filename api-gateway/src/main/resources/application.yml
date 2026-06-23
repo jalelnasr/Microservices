@@ -1,0 +1,52 @@
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:configserver:http://config-server:8888
+  cloud:
+    config:
+      fail-fast: false
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth,/api/auth/**
+
+        - id: offre-service
+          uri: lb://offre-service
+          predicates:
+            - Path=/api/offres,/api/offres/**
+
+        - id: candidature-service
+          uri: lb://candidature-service
+          predicates:
+            - Path=/api/candidatures,/api/candidatures/**
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8180/realms/microservices-realm
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: false
+    hostname: api-gateway
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always

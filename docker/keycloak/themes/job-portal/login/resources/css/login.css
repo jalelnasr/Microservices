@@ -1,0 +1,51 @@
+body {
+  background: linear-gradient(135deg, #1976d2 0%, #0f172a 100%);
+  font-family: Arial, sans-serif;
+}
+
+.login-pf-page {
+  background: transparent;
+}
+
+.login-pf-page .card-pf {
+  border-top: 5px solid #1976d2;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+}
+
+#kc-header-wrapper {
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+#kc-header-wrapper::before {
+  content: "Job Portal - Microservices";
+}
+
+#kc-header-wrapper {
+  font-size: 0;
+}
+
+#kc-header-wrapper::before {
+  font-size: 28px;
+}
+
+.pf-c-button.pf-m-primary,
+.btn-primary {
+  background-color: #1976d2;
+  border-color: #1976d2;
+  border-radius: 6px;
+}
+
+.pf-c-button.pf-m-primary:hover,
+.btn-primary:hover {
+  background-color: #125aa0;
+  border-color: #125aa0;
+}
+
+a {
+  color: #1976d2;
+}

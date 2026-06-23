@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  # Auth Service (Node.js)
+  auth-service:
+    build: ../auth-service
+    container_name: auth-service
+    ports:
+      - "8083:8083"
+    networks:
+      - microservices-network
+    environment:
+      - NODE_ENV=production
+      - PORT=8083
+      - EUREKA_HOST=eureka-server
+      - EUREKA_PORT=8761
+      - KEYCLOAK_URL=http://keycloak:8180
+      - KEYCLOAK_REALM=microservices-realm
+      - KEYCLOAK_CLIENT_ID=auth-service-client
+      - KEYCLOAK_CLIENT_SECRET=S3cr3t-Auth-S3rv1c3-K3y-2024
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:8083/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+networks:
+  microservices-network:
+    external: true
+    name: docker_microservices-network

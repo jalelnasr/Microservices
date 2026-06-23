@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_DB: candidature_db
+      POSTGRES_USER: candidature_user
+      POSTGRES_PASSWORD: candidature_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U candidature_user -d candidature_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # Candidature Service
+  candidature-service:
+    build: ../candidature-service-nodejs
+    container_name: candidature-service-nodejs
+    ports:
+      - "8082:8082"
+    networks:
+      - microservices-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=docker
+      - PORT=8082
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=candidature_db
+      - DB_USER=candidature_user
+      - DB_PASSWORD=candidature_password
+      - EUREKA_HOST=eureka-server
+      - EUREKA_PORT=8761
+      - KEYCLOAK_URL=http://keycloak:8180
+      - KEYCLOAK_REALM=microservices-realm
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - OFFRE_SERVICE_URL=http://offre-service:8081
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+networks:
+  microservices-network:
+    external: true
+    name: docker_microservices-network
+
+volumes:
+  postgres_data:
+    driver: local

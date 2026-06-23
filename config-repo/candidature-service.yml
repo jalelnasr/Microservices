@@ -1,0 +1,60 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: candidature-service
+  datasource:
+    url: jdbc:postgresql://postgres:5432/candidature_db
+    username: candidature_user
+    password: candidature_password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: guest
+    password: guest
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8180/realms/microservices-realm
+          jwk-set-uri: http://keycloak:8180/realms/microservices-realm/protocol/openid-connect/certs
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+
+# Keycloak Security
+keycloak:
+  realm: microservices-realm
+  auth-server-url: http://keycloak:8180
+  resource: candidature-service-client
+  credentials:
+    secret: S3cr3t-C4nd1d4tur3-S3rv1c3-K3y-2024
+  use-resource-role-mappings: true
+
+# OpenFeign Configuration for sync communication
+feign:
+  client:
+    config:
+      offre-service:
+        url: http://offre-service:8081
+
+# Logging for debugging JWT issues
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.security.oauth2: DEBUG

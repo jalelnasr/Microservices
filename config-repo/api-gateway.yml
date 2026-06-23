@@ -1,0 +1,61 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      default-filters:
+        - JwtRelay
+      routes:
+        - id: auth-service
+          uri: lb://auth-service
+          predicates:
+            - Path=/api/auth,/api/auth/**
+            
+        - id: offre-service
+          uri: lb://offre-service
+          predicates:
+            - Path=/api/offres,/api/offres/**
+            
+        - id: candidature-service
+          uri: lb://candidature-service
+          predicates:
+            - Path=/api/candidatures,/api/candidatures/**
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://keycloak:8180/realms/microservices-realm
+          jwk-set-uri: http://keycloak:8180/realms/microservices-realm/protocol/openid-connect/certs
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-server:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+
+# Keycloak Configuration
+keycloak:
+  realm: microservices-realm
+  auth-server-url: http://keycloak:8180
+  resource: api-gateway-client
+  credentials:
+    secret: S3cr3t-G4t3w4y-K3y-2024
+  use-resource-role-mappings: true
+  bearer-only: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: always

@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: microservices-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8080
+      - REACT_APP_KEYCLOAK_URL=http://localhost:8180
+      - REACT_APP_KEYCLOAK_REALM=microservices-realm
+      - REACT_APP_KEYCLOAK_CLIENT_ID=frontend-client
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  microservices-network:
+    external: true

@@ -1,0 +1,138 @@
+import React from 'react';
+import {
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Select,
+  MenuItem,
+  Button,
+  CircularProgress,
+  Alert,
+} from '@mui/material';
+import { Delete } from '@mui/icons-material';
+import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { candidatureApi } from '../../services/api';
+import { toast } from 'react-toastify';
+import { format } from 'date-fns';
+
+const RecruiterCandidatures = () => {
+  const queryClient = useQueryClient();
+
+  const { data: candidatures, isLoading, error } = useQuery(
+    'recruiter-candidatures',
+    candidatureApi.getAllCandidatures,
+    { select: (response) => response.data }
+  );
+
+  const updateStatutMutation = useMutation(
+    ({ id, statut }) => candidatureApi.updateStatut(id, statut),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries('recruiter-candidatures');
+        toast.success('Statut mis à jour');
+      },
+      onError: () => toast.error('Erreur lors de la mise à jour'),
+    }
+  );
+
+  const deleteMutation = useMutation(candidatureApi.deleteCandidature, {
+    onSuccess: () => {
+      queryClient.invalidateQueries('recruiter-candidatures');
+      toast.success('Candidature supprimee');
+    },
+    onError: () => toast.error('Erreur lors de la suppression'),
+  });
+
+  const getStatutColor = (statut) => {
+    switch (statut) {
+      case 'EN_ATTENTE': return 'warning';
+      case 'ACCEPTE': return 'success';
+      case 'REFUSE': return 'error';
+      case 'EN_COURS': return 'info';
+      default: return 'default';
+    }
+  };
+
+  if (isLoading) return <CircularProgress />;
+  if (error) return <Alert severity="error">Erreur: {error.message}</Alert>;
+
+  return (
+    <Box>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Offre ID</TableCell>
+              <TableCell>Candidat</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Téléphone</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Statut</TableCell>
+              <TableCell>Action</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {candidatures?.map((candidature) => (
+              <TableRow key={candidature.id}>
+                <TableCell>{candidature.offreId}</TableCell>
+                <TableCell>
+                  {candidature.nomCandidat}
+                </TableCell>
+                <TableCell>{candidature.emailCandidat}</TableCell>
+                <TableCell>{candidature.telephone || '-'}</TableCell>
+                <TableCell>
+                  {format(new Date(candidature.dateCandidature), 'dd/MM/yyyy')}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={candidature.statut}
+                    color={getStatutColor(candidature.statut)}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Select
+                    size="small"
+                    value={candidature.statut}
+                    onChange={(e) =>
+                      updateStatutMutation.mutate({
+                        id: candidature.id,
+                        statut: e.target.value,
+                      })
+                    }
+                  >
+                    <MenuItem value="EN_ATTENTE">EN_ATTENTE</MenuItem>
+                    <MenuItem value="EN_COURS">EN_COURS</MenuItem>
+                    <MenuItem value="ACCEPTE">ACCEPTE</MenuItem>
+                    <MenuItem value="REFUSE">REFUSE</MenuItem>
+                  </Select>
+                  <Button
+                    size="small"
+                    color="error"
+                    startIcon={<Delete />}
+                    onClick={() => {
+                      if (window.confirm('Supprimer cette candidature ?')) {
+                        deleteMutation.mutate(candidature.id);
+                      }
+                    }}
+                    sx={{ ml: 1 }}
+                  >
+                    Supprimer
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+};
+
+export default RecruiterCandidatures;

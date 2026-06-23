@@ -1,0 +1,261 @@
+version: '3.8'
+
+services:
+  # Infrastructure Services
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.7
+    container_name: keycloak
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=Admin@2024
+      - KC_DB=dev-file
+      - KC_HOSTNAME_STRICT=false
+      - KC_HTTP_ENABLED=true
+      - KC_HOSTNAME_STRICT_HTTPS=false
+      - KC_LOG_LEVEL=INFO
+    ports:
+      - "8180:8180"
+    volumes:
+      - ./keycloak/realm-export.json:/opt/keycloak/data/import/realm-export.json
+      - ./keycloak/themes:/opt/keycloak/themes
+      - keycloak_data:/opt/keycloak/data
+    command: ["start", "--import-realm", "--http-port=8180"]
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=offre_db
+      - MYSQL_USER=offre_user
+      - MYSQL_PASSWORD=offre_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      - POSTGRES_DB=candidature_db
+      - POSTGRES_USER=candidature_user
+      - POSTGRES_PASSWORD=candidature_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Configuration and Discovery
+  config-server:
+    build:
+      context: ../config-server
+      dockerfile: Dockerfile
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker,native
+    volumes:
+      - ../config-repo:/app/config-repo
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  eureka-server:
+    build:
+      context: ../eureka-server
+      dockerfile: Dockerfile
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - config-server
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Microservices
+  auth-service:
+    build:
+      context: ../auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "8083:8083"
+    environment:
+      - NODE_ENV=docker
+      - PORT=8083
+      - KEYCLOAK_BASE_URL=http://keycloak:8180
+      - KEYCLOAK_REALM=microservices-realm
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+    depends_on:
+      - keycloak
+      - eureka-server
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  offre-service:
+    build:
+      context: ../offre-service
+      dockerfile: Dockerfile
+    container_name: offre-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - mysql
+      - rabbitmq
+      - keycloak
+      - config-server
+      - eureka-server
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  candidature-service:
+    build:
+      context: ../candidature-service-nodejs
+      dockerfile: Dockerfile
+    container_name: candidature-service-nodejs
+    ports:
+      - "8082:8082"
+    environment:
+      - NODE_ENV=docker
+      - PORT=8082
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=candidature_db
+      - DB_USER=candidature_user
+      - DB_PASSWORD=candidature_password
+      - EUREKA_HOST=eureka-server
+      - EUREKA_PORT=8761
+      - KEYCLOAK_URL=http://keycloak:8180
+      - KEYCLOAK_REALM=microservices-realm
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - OFFRE_SERVICE_URL=http://offre-service:8081
+    depends_on:
+      - postgres
+      - rabbitmq
+      - keycloak
+      - eureka-server
+      - offre-service
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ../api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway-complete
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - keycloak
+      - config-server
+      - eureka-server
+      - auth-service
+      - offre-service
+      - candidature-service
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: microservices-frontend-complete
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8080
+      - REACT_APP_KEYCLOAK_URL=http://localhost:8180
+      - REACT_APP_KEYCLOAK_REALM=microservices-realm
+      - REACT_APP_KEYCLOAK_CLIENT_ID=frontend-client
+    depends_on:
+      - api-gateway
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - api-gateway
+      - offre-service
+      - candidature-service
+      - eureka-server
+      - config-server
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.6
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    networks:
+      - microservices-network
+    restart: unless-stopped
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  postgres_data:
+  rabbitmq_data:
+  keycloak_data:
+  prometheus_data:
+  grafana_data:

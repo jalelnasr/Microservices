@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build: ../api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    networks:
+      - microservices-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CLOUD_CONFIG_URI=http://config-server:8888
+      - EUREKA_CLIENT_SERVICEURL_DEFAULTZONE=http://eureka-server:8761/eureka/
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+networks:
+  microservices-network:
+    external: true
+    name: docker_microservices-network
