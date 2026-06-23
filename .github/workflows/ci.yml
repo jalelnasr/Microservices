@@ -52,8 +52,23 @@ jobs:
       - name: Build Frontend
         working-directory: frontend
         run: |
-          npm ci
+          npm install
           npm run build
 
       - name: Validate Docker Compose config
         run: docker compose -f docker/complete-stack.yml config
+
+      - name: Validate Kubernetes manifests
+        uses: azure/setup-kubectl@v4
+        with:
+          version: v1.30.0
+
+      - name: Check Kubernetes YAML files
+        run: |
+          kubectl create --dry-run=client --validate=false -f k8s/00-namespace.yaml -o yaml
+          kubectl create --dry-run=client --validate=false -f k8s/01-configmaps-secrets.yaml -o yaml
+          kubectl create --dry-run=client --validate=false -f k8s/02-databases.yaml -o yaml
+          kubectl create --dry-run=client --validate=false -f k8s/03-infrastructure.yaml -o yaml
+          kubectl create --dry-run=client --validate=false -f k8s/04-backend-services.yaml -o yaml
+          kubectl create --dry-run=client --validate=false -f k8s/05-frontend.yaml -o yaml
+          kubectl create --dry-run=client --validate=false -f k8s/06-monitoring.yaml -o yaml
