@@ -241,6 +241,7 @@ Le workflow se lance automatiquement sur push vers `main` ou `master`.
 
 - Monitoring Prometheus/Grafana.
 - CI/CD avec GitHub Actions.
+- Manifests Kubernetes dans le dossier `k8s/`.
 - Theme Keycloak personnalise.
 - Securite par roles jusqu'au microservice candidature.
 - Communication synchrone dans les deux sens.
