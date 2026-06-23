@@ -20,7 +20,7 @@ import {
   CircularProgress,
   Alert,
 } from '@mui/material';
-import { Add, Edit, Delete, Visibility } from '@mui/icons-material';
+import { Add, Edit, Delete } from '@mui/icons-material';
 import { useQuery, useMutation, useQueryClient } from 'react-query';
 import { offreApi } from '../../services/api';
 import { toast } from 'react-toastify';

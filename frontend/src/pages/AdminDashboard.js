@@ -5,7 +5,6 @@ import {
   Box,
   Tabs,
   Tab,
-  Button,
   Paper,
 } from '@mui/material';
 import { AdminPanelSettings, Work, Description } from '@mui/icons-material';

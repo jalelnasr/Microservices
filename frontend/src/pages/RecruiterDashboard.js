@@ -7,7 +7,7 @@ import {
   Tab,
   Paper,
 } from '@mui/material';
-import { BusinessCenter, Description } from '@mui/icons-material';
+import { BusinessCenter } from '@mui/icons-material';
 import RecruiterOffres from '../components/Recruiter/RecruiterOffres';
 import RecruiterCandidatures from '../components/Recruiter/RecruiterCandidatures';
 

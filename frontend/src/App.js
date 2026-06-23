@@ -11,7 +11,6 @@ import Navbar from './components/Layout/Navbar';
 import OffresPage from './pages/OffresPage';
 import LoginPage from './pages/LoginPage';
 import MesCandidaturesPage from './pages/MesCandidaturesPage';
-import GestionCandidaturesPage from './pages/GestionCandidaturesPage';
 import PostulerPage from './pages/PostulerPage';
 import AdminDashboard from './pages/AdminDashboard';
 import RecruiterDashboard from './pages/RecruiterDashboard';
