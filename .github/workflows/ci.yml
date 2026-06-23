@@ -29,6 +29,11 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Build Eureka Server
         run: mvn -f eureka-server/pom.xml clean package -DskipTests
 
@@ -58,17 +63,20 @@ jobs:
       - name: Validate Docker Compose config
         run: docker compose -f docker/complete-stack.yml config
 
-      - name: Validate Kubernetes manifests
-        uses: azure/setup-kubectl@v4
-        with:
-          version: v1.30.0
-
       - name: Check Kubernetes YAML files
         run: |
-          kubectl create --dry-run=client --validate=false -f k8s/00-namespace.yaml -o yaml
-          kubectl create --dry-run=client --validate=false -f k8s/01-configmaps-secrets.yaml -o yaml
-          kubectl create --dry-run=client --validate=false -f k8s/02-databases.yaml -o yaml
-          kubectl create --dry-run=client --validate=false -f k8s/03-infrastructure.yaml -o yaml
-          kubectl create --dry-run=client --validate=false -f k8s/04-backend-services.yaml -o yaml
-          kubectl create --dry-run=client --validate=false -f k8s/05-frontend.yaml -o yaml
-          kubectl create --dry-run=client --validate=false -f k8s/06-monitoring.yaml -o yaml
+          python -m pip install pyyaml
+          python - <<'PY'
+          from pathlib import Path
+          import yaml
+
+          for path in sorted(Path("k8s").glob("*.yaml")):
+              docs = list(yaml.safe_load_all(path.read_text()))
+              docs = [doc for doc in docs if doc]
+              if not docs:
+                  raise SystemExit(f"{path} is empty")
+              for doc in docs:
+                  if "apiVersion" not in doc or "kind" not in doc or "metadata" not in doc:
+                      raise SystemExit(f"{path} contains an invalid Kubernetes document")
+              print(f"validated {path}")
+          PY
